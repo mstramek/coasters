@@ -2,6 +2,10 @@
 
 namespace Config;
 
+use App\Events\EventTypeEnum;
+use App\Models\CheckResult;
+use App\Services\PubSubService;
+use App\Services\StatsService;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Exceptions\FrameworkException;
 use CodeIgniter\HotReloader\HotReloader;
@@ -52,4 +56,52 @@ Events::on('pre_system', static function (): void {
             });
         }
     }
+});
+
+Events::on(EventTypeEnum::COASTER_CREATED->value, function ($data) {
+    /** @var PubSubService $coasterPubSub */
+    $coasterPubSub = service(Services::COASTER_PUB_SUB);
+    $coasterPubSub->publishCoasterCreated($data);;
+});
+
+Events::on(EventTypeEnum::COASTER_PATCHED->value, function ($data) {
+    /** @var PubSubService $coasterPubSub */
+    $coasterPubSub = service(Services::COASTER_PUB_SUB);
+    $coasterPubSub->publishCoasterPatched($data);;
+});
+
+Events::on(EventTypeEnum::WAGON_CREATED->value, function ($data) {
+    /** @var PubSubService $coasterPubSub */
+    $coasterPubSub = service(Services::COASTER_PUB_SUB);
+    $coasterPubSub->publishWagonCreated($data);;
+});
+
+Events::on(EventTypeEnum::WAGON_DELETED->value, function ($data) {
+    /** @var PubSubService $coasterPubSub */
+    $coasterPubSub = service(Services::COASTER_PUB_SUB);
+    $coasterPubSub->publishWagonDeleted($data);;
+});
+
+Events::on(EventTypeEnum::COASTER_CHECKED->value, function (array $checkResult) {
+    /** @var StatsService $statsService */
+    $statsService = service(Services::STATS);
+
+    if (!$checkResult[CheckResult::STATUS]) {
+        log_message(
+            'error',
+            sprintf(
+                'Kolejka %s - %s',
+                $checkResult[CheckResult::COASTER_ID],
+                $checkResult[CheckResult::SUMMARY]
+            )
+        );
+    }
+
+    $statsService->saveStatsAsync($checkResult);;
+});
+
+Events::on(EventTypeEnum::COASTER_STATS_UPDATED->value, function (string $coasterId) {
+    /** @var PubSubService $coasterPubSub */
+    $coasterPubSub = service(Services::COASTER_PUB_SUB);
+    $coasterPubSub->publishStatsSaved($coasterId);
 });

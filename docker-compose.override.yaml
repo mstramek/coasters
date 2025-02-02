@@ -1,0 +1,18 @@
+services:
+  php:
+    env_file:
+      - .env.development
+    volumes:
+      - ./app:/var/www/html
+      - ./app/writable/dev:/var/www/html/writable:rw
+    command: >
+      sh -c "composer install --prefer-dist --no-interaction --working-dir=/var/www/html && php-fpm"
+  monitoring:
+    volumes:
+      - ./app:/var/www/html
+      - ./app/writable/dev:/var/www/html/writable:rw
+    env_file:
+      - .env.development
+  nginx:
+    volumes:
+      - ./app/writable/dev:/var/www/html/writable
